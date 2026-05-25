@@ -13,6 +13,7 @@ namespace KaraokeClub.Data
             _connectionString = connectionString;
         }
 
+        // ── Таблицы ──────────────────────────────────────────────
         public DbSet<Role> Roles { get; set; } = null!;
         public DbSet<MenuType> MenuTypes { get; set; } = null!;
         public DbSet<KaraokeOption> KaraokeOptions { get; set; } = null!;
@@ -21,8 +22,12 @@ namespace KaraokeClub.Data
         public DbSet<Order> Orders { get; set; } = null!;
         public DbSet<OrderItem> OrderItems { get; set; } = null!;
         public DbSet<Bill> Bills { get; set; } = null!;
-
         public DbSet<AppUser> AppUsers { get; set; } = null!;
+
+        // ── Представления (Views) — только чтение ────────────────
+        public DbSet<RevenueReportRow> RevenueReportView { get; set; } = null!;
+        public DbSet<MenuSalesReportRow> MenuSalesReportView { get; set; } = null!;
+        public DbSet<StaffWorkloadReportRow> StaffWorkloadReportView { get; set; } = null!;
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
         {
@@ -31,6 +36,7 @@ namespace KaraokeClub.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // ── Таблицы с триггерами ─────────────────────────────
             modelBuilder.Entity<OrderItem>()
                 .ToTable(tb => tb.UseSqlOutputClause(false));
             modelBuilder.Entity<OrderItem>()
@@ -48,9 +54,22 @@ namespace KaraokeClub.Data
             modelBuilder.Entity<Bill>()
                 .Property(e => e.Id)
                 .ValueGeneratedOnAdd();
+
+            // ── Привязка представлений к именам в БД ─────────────
+            modelBuilder.Entity<RevenueReportRow>()
+                .ToView("vw_RevenueReport")
+                .HasNoKey();
+
+            modelBuilder.Entity<MenuSalesReportRow>()
+                .ToView("vw_MenuSalesReport")
+                .HasNoKey();
+
+            modelBuilder.Entity<StaffWorkloadReportRow>()
+                .ToView("vw_StaffWorkloadReport")
+                .HasNoKey();
         }
 
-        // ?? вспомогательный метод: вызвать хранимую процедуру ??????????????
+        // ── Хранимые процедуры ───────────────────────────────────
         public void ExecProc(string procName, params SqlParameter[] parameters)
         {
             if (parameters.Length == 0)
@@ -66,20 +85,18 @@ namespace KaraokeClub.Data
             );
         }
 
-        // ─── Резервная копия ─────────────────────────────────────
+        // ── Резервная копия ──────────────────────────────────────
         public void BackupDatabase(string backupPath)
         {
             Database.ExecuteSqlRaw("EXEC usp_Backup_Database @p0", backupPath);
         }
 
-        // ─── Восстановление ──────────────────────────────────────
+        // ── Восстановление ───────────────────────────────────────
         public void RestoreDatabase(string backupPath)
         {
-            // Закрываем пул соединений нашего приложения к KaraokeClub
             Database.CloseConnection();
             SqlConnection.ClearAllPools();
 
-            // Теперь выполняем через отдельное соединение к master
             var masterCs = _connectionString
                 .Replace("Database=KaraokeClub", "Database=master")
                 .Replace("Initial Catalog=KaraokeClub", "Initial Catalog=master");

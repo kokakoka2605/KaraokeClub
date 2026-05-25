@@ -4,74 +4,72 @@ using System.Linq;
 using System.Windows;
 using System.Windows.Documents;
 using System.Windows.Media;
-using Microsoft.EntityFrameworkCore;
 using KaraokeClub.Data;
-using KaraokeClub.Models;
 
 namespace KaraokeClub.Reports
 {
     /// <summary>
     /// Строит FlowDocument-отчёты для аналитики KaraokeClub.
-    /// Все стили задаются программно — никаких внешних словарей не нужно.
+    /// Данные загружаются исключительно через SQL-представления:
+    ///   - vw_RevenueReport       → Отчёт по выручке
+    ///   - vw_MenuSalesReport     → Анализ меню и Karaoke-опций
+    ///   - vw_StaffWorkloadReport → Нагрузка на персонал
     /// </summary>
     public static class ReportBuilder
     {
-        // ── Цветовая палитра (светлая тема, акценты проекта) ─────────────
-        private static readonly SolidColorBrush HeaderBg = new(Color.FromRgb(74, 124, 31));    // #4a7c1f — основной зелёный
-        private static readonly SolidColorBrush SubHeaderBg = new(Color.FromRgb(90, 150, 37));    // #5a9625 — зелёный hover
-        private static readonly SolidColorBrush TableHead = new(Color.FromRgb(74, 124, 31));    // зелёная шапка таблицы
-        private static readonly SolidColorBrush AltRow = new(Color.FromRgb(245, 250, 240));  // очень светло-зелёный
-        private static readonly SolidColorBrush WarnBg = new(Color.FromRgb(255, 243, 224));  // предупреждение — оранжеватый
-        private static readonly SolidColorBrush AccentBg = new(Color.FromRgb(220, 237, 200));  // светло-зелёный акцент
-        private static readonly SolidColorBrush TextDark = new(Color.FromRgb(30, 30, 30));     // #1e1e1e
-        private static readonly SolidColorBrush TextGray = new(Color.FromRgb(100, 100, 100));  // #646464
+        // ── Цветовая палитра ─────────────────────────────────────
+        private static readonly SolidColorBrush HeaderBg = new(Color.FromRgb(74, 124, 31));
+        private static readonly SolidColorBrush TableHead = new(Color.FromRgb(74, 124, 31));
+        private static readonly SolidColorBrush AltRow = new(Color.FromRgb(245, 250, 240));
+        private static readonly SolidColorBrush WarnBg = new(Color.FromRgb(255, 243, 224));
+        private static readonly SolidColorBrush TextDark = new(Color.FromRgb(30, 30, 30));
+        private static readonly SolidColorBrush TextGray = new(Color.FromRgb(100, 100, 100));
         private static readonly SolidColorBrush White = Brushes.White;
-        private static readonly SolidColorBrush BorderBrush = new(Color.FromRgb(190, 215, 160));  // зелёная рамка таблицы
-        private static readonly SolidColorBrush TotalBg = new(Color.FromRgb(200, 224, 0));    // #c8e000 — итоговая строка
+        private static readonly SolidColorBrush BorderBrush = new(Color.FromRgb(190, 215, 160));
+        private static readonly SolidColorBrush TotalBg = new(Color.FromRgb(200, 224, 0));
 
-        // ══════════════════════════════════════════════════════════
+        // ════════════════════════════════════════════════════════
         // ОТЧЁТ 1 — Выручка по заказам за период
-        // ══════════════════════════════════════════════════════════
+        // Источник данных: представление vw_RevenueReport
+        // ════════════════════════════════════════════════════════
         public static FlowDocument BuildRevenueReport(
             AppDbContext ctx,
             DateTime dateFrom,
             DateTime dateTo,
-            string workerFilter,    // "Все сотрудники" или имя
-            string statusFilter)    // "Все статусы" | "paid" | "unpaid"
+            string workerFilter,   // "Все сотрудники" или имя
+            string statusFilter)   // "Все статусы" | "paid" | "unpaid"
         {
             var doc = CreateDocument();
 
-            AddHeader(doc, "Отчёт по выручке за период",
+            AddHeader(doc,
+                "Отчёт по выручке за период",
                 $"Период: {dateFrom:dd.MM.yyyy} — {dateTo:dd.MM.yyyy}   |   " +
                 $"Сотрудник: {workerFilter}   |   Статус оплаты: {statusFilter}");
 
-            // Загружаем счета за период
+            // ── Загрузка через представление vw_RevenueReport ────
             var dfUtc = dateFrom.Date;
             var dtUtc = dateTo.Date.AddDays(1);
 
-            var billsQ = ctx.Bills
-                .Include(b => b.Order).ThenInclude(o => o!.Worker)
-                .Include(b => b.Order).ThenInclude(o => o!.OrderItems)
-                .Where(b => b.CreatedAt >= dfUtc && b.CreatedAt < dtUtc);
+            var query = ctx.RevenueReportView
+                .Where(r => r.BillDate >= dfUtc && r.BillDate < dtUtc);
 
             if (statusFilter != "Все статусы")
-                billsQ = billsQ.Where(b => b.BillStatus == statusFilter);
+                query = query.Where(r => r.BillStatus == statusFilter);
 
-            var bills = billsQ.OrderBy(b => b.CreatedAt).ToList();
+            var rows = query.ToList();
 
             if (workerFilter != "Все сотрудники")
-                bills = bills.Where(b => b.Order?.Worker?.Name == workerFilter).ToList();
+                rows = rows.Where(r => r.WorkerName == workerFilter).ToList();
 
             // ── KPI ──────────────────────────────────────────────
-            var totalRev = bills.Sum(b => b.TotalAmount ?? 0);
-            var paidRev = bills.Where(b => b.BillStatus == "paid").Sum(b => b.TotalAmount ?? 0);
-            var unpaidRev = bills.Where(b => b.BillStatus == "unpaid").Sum(b => b.TotalAmount ?? 0);
-            var billCount = bills.Count;
-            var avgBill = billCount > 0 ? bills.Average(b => b.TotalAmount ?? 0) : 0;
-            var avgGuests = bills.Any(b => b.Order?.GuestCount > 0)
-                                ? bills.Where(b => b.Order?.GuestCount > 0)
-                                       .Average(b => b.Order!.GuestCount!.Value)
-                                : 0;
+            var totalRev = rows.Sum(r => r.TotalAmount ?? 0);
+            var paidRev = rows.Where(r => r.BillStatus == "paid").Sum(r => r.TotalAmount ?? 0);
+            var unpaidRev = rows.Where(r => r.BillStatus == "unpaid").Sum(r => r.TotalAmount ?? 0);
+            var billCount = rows.Count;
+            var avgBill = billCount > 0 ? rows.Average(r => r.TotalAmount ?? 0) : 0;
+            var avgGuests = rows.Any(r => r.GuestCount > 0)
+                ? rows.Where(r => r.GuestCount > 0).Average(r => (double)r.GuestCount!.Value)
+                : 0;
 
             AddSectionTitle(doc, "Ключевые показатели");
             var kpiTable = CreateTable(doc, new[] { "*", "*", "*", "*", "*", "*" });
@@ -82,15 +80,15 @@ namespace KaraokeClub.Reports
                 $"{totalRev:F2} MDL", $"{paidRev:F2} MDL", $"{unpaidRev:F2} MDL",
                 $"{billCount}", $"{avgBill:F2} MDL", $"{avgGuests:F1}");
 
-            // ── Выручка по сотрудникам ───────────────────────────
+            // ── Выручка по официантам ────────────────────────────
             AddSectionTitle(doc, "Выручка по официантам");
-            var byWorker = bills
-                .GroupBy(b => b.Order?.Worker?.Name ?? "—")
+            var byWorker = rows
+                .GroupBy(r => r.WorkerName)
                 .Select(g => new {
                     Worker = g.Key,
-                    Revenue = g.Sum(b => b.TotalAmount ?? 0),
+                    Revenue = g.Sum(r => r.TotalAmount ?? 0),
                     Count = g.Count(),
-                    Avg = g.Average(b => b.TotalAmount ?? 0)
+                    Avg = g.Average(r => r.TotalAmount ?? 0)
                 })
                 .OrderByDescending(x => x.Revenue).ToList();
 
@@ -101,20 +99,19 @@ namespace KaraokeClub.Reports
             {
                 AddTableRow(wTable, false,
                     w.Worker, $"{w.Revenue:F2}", $"{w.Count}", $"{w.Avg:F2}",
-                    "", "",
-                    alt ? AltRow : White);
+                    bg: alt ? AltRow : White);
                 alt = !alt;
             }
             AddTotalRow(wTable, "ИТОГО", $"{totalRev:F2}", $"{billCount}", "");
 
-            // ── Выручка по методу оплаты ─────────────────────────
+            // ── Способы оплаты ───────────────────────────────────
             AddSectionTitle(doc, "Способы оплаты");
-            var byPayment = bills
-                .Where(b => b.BillStatus == "paid")
-                .GroupBy(b => b.PaymentMethod ?? "—")
+            var byPayment = rows
+                .Where(r => r.BillStatus == "paid")
+                .GroupBy(r => r.PaymentMethod ?? "—")
                 .Select(g => new {
                     Method = g.Key,
-                    Revenue = g.Sum(b => b.TotalAmount ?? 0),
+                    Revenue = g.Sum(r => r.TotalAmount ?? 0),
                     Count = g.Count()
                 })
                 .OrderByDescending(x => x.Revenue).ToList();
@@ -126,8 +123,7 @@ namespace KaraokeClub.Reports
             {
                 AddTableRow(pmTable, false,
                     pm.Method, $"{pm.Revenue:F2}", $"{pm.Count}",
-                    "", "", "",
-                    alt ? AltRow : White);
+                    bg: alt ? AltRow : White);
                 alt = !alt;
             }
 
@@ -138,16 +134,16 @@ namespace KaraokeClub.Reports
                 "№ счёта", "Стол", "Официант",
                 "Сумма (MDL)", "Статус", "Дата");
             alt = false;
-            foreach (var b in bills)
+            foreach (var r in rows)
             {
-                var rowBg = b.BillStatus == "unpaid" ? WarnBg : (alt ? AltRow : White);
+                var rowBg = r.BillStatus == "unpaid" ? WarnBg : (alt ? AltRow : White);
                 AddTableRow(dTable, false,
-                    $"{b.Id}",
-                    $"Стол {b.Order?.TableNumber ?? 0}",
-                    b.Order?.Worker?.Name ?? "—",
-                    $"{b.TotalAmount:F2}",
-                    b.BillStatus == "paid" ? "Оплачен" : "Не оплачен",
-                    $"{b.CreatedAt:dd.MM.yyyy HH:mm}",
+                    $"{r.BillId}",
+                    $"Стол {r.TableNumber}",
+                    r.WorkerName,
+                    $"{r.TotalAmount:F2}",
+                    r.BillStatus == "paid" ? "Оплачен" : "Не оплачен",
+                    $"{r.BillDate:dd.MM.yyyy HH:mm}",
                     rowBg);
                 alt = !alt;
             }
@@ -156,45 +152,45 @@ namespace KaraokeClub.Reports
             return doc;
         }
 
-        // ══════════════════════════════════════════════════════════
+        // ════════════════════════════════════════════════════════
         // ОТЧЁТ 2 — Анализ меню и Karaoke-опций
-        // ══════════════════════════════════════════════════════════
+        // Источник данных: представление vw_MenuSalesReport
+        // ════════════════════════════════════════════════════════
         public static FlowDocument BuildMenuReport(
             AppDbContext ctx,
             DateTime dateFrom,
             DateTime dateTo,
-            string itemTypeFilter,  // "Всё" | "product" | "option"
+            string itemTypeFilter,  // "Всё" | "product" | "karaoke"
             int topN)
         {
             var doc = CreateDocument();
 
-            AddHeader(doc, "Анализ продаж меню и Karaoke-опций",
+            AddHeader(doc,
+                "Анализ продаж меню и Karaoke-опций",
                 $"Период: {dateFrom:dd.MM.yyyy} — {dateTo:dd.MM.yyyy}   |   " +
                 $"Тип: {(itemTypeFilter == "Всё" ? "Все позиции" : itemTypeFilter == "product" ? "Блюда и напитки" : "Karaoke-опции")}   |   Топ {topN}");
 
+            // ── Загрузка через представление vw_MenuSalesReport ──
             var dfUtc = dateFrom.Date;
             var dtUtc = dateTo.Date.AddDays(1);
 
-            var itemsQ = ctx.OrderItems
-                .Include(oi => oi.Product).ThenInclude(p => p!.Type)
-                .Include(oi => oi.Option)
-                .Include(oi => oi.Order)
-                .Where(oi => oi.Order!.CreatedAt >= dfUtc && oi.Order.CreatedAt < dtUtc);
+            var query = ctx.MenuSalesReportView
+                .Where(r => r.OrderDate >= dfUtc && r.OrderDate < dtUtc);
 
             if (itemTypeFilter != "Всё")
-                itemsQ = itemsQ.Where(oi => oi.ItemType == itemTypeFilter);
+                query = query.Where(r => r.ItemType == itemTypeFilter);
 
-            var items = itemsQ.ToList();
+            var rows = query.ToList();
 
-            // ── Сводка product vs option ─────────────────────────
+            // ── Сводка product vs karaoke ────────────────────────
             AddSectionTitle(doc, "Сводка по типам позиций");
-            var byType = items
-                .GroupBy(oi => oi.ItemType == "product" ? "Блюда / Напитки" : "Karaoke-опции")
+            var byType = rows
+                .GroupBy(r => r.ItemType == "product" ? "Блюда / Напитки" : "Karaoke-опции")
                 .Select(g => new {
                     Type = g.Key,
-                    Revenue = g.Sum(oi => oi.PriceAtOrder * oi.Quantity),
-                    Qty = g.Sum(oi => oi.Quantity),
-                    Avg = g.Average(oi => oi.PriceAtOrder)
+                    Revenue = g.Sum(r => r.LineTotal),
+                    Qty = g.Sum(r => r.Quantity),
+                    Avg = g.Average(r => r.PriceAtOrder)
                 }).ToList();
 
             var typeTable = CreateTable(doc, new[] { "2*", "*", "*", "*" });
@@ -204,21 +200,16 @@ namespace KaraokeClub.Reports
                     t.Type, $"{t.Revenue:F2}", $"{t.Qty}", $"{t.Avg:F2}");
 
             // ── Топ N блюд ───────────────────────────────────────
-            var topProducts = items
-                .Where(oi => oi.ItemType == "product" && oi.Product != null)
-                .GroupBy(oi => new {
-                    oi.ProductId,
-                    Name = oi.Product!.Name,
-                    TypeName = oi.Product.Type?.Name ?? "—",
-                    Section = oi.Product.Section
-                })
+            var topProducts = rows
+                .Where(r => r.ItemType == "product" && r.ProductName != null)
+                .GroupBy(r => new { r.ProductId, r.ProductName, r.TypeName, r.ProductSection })
                 .Select(g => new {
-                    g.Key.Name,
-                    g.Key.TypeName,
-                    g.Key.Section,
-                    TotalQty = g.Sum(oi => oi.Quantity),
-                    Revenue = g.Sum(oi => oi.PriceAtOrder * oi.Quantity),
-                    AvgPrice = g.Average(oi => oi.PriceAtOrder)
+                    g.Key.ProductName,
+                    TypeName = g.Key.TypeName ?? "—",
+                    Section = g.Key.ProductSection ?? "—",
+                    TotalQty = g.Sum(r => r.Quantity),
+                    Revenue = g.Sum(r => r.LineTotal),
+                    AvgPrice = g.Average(r => r.PriceAtOrder)
                 })
                 .OrderByDescending(x => x.Revenue)
                 .Take(topN).ToList();
@@ -226,36 +217,31 @@ namespace KaraokeClub.Reports
             AddSectionTitle(doc, $"Топ {topN} блюд и напитков по выручке");
             var pTable = CreateTable(doc, new[] { "3*", "2*", "2*", "*", "*" });
             AddTableRow(pTable, true,
-                "Позиция", "Тип", "Раздел",
-                "Кол-во", "Выручка (MDL)");
+                "Позиция", "Тип", "Раздел", "Кол-во", "Выручка (MDL)");
             bool alt = false;
             int rank = 1;
             foreach (var p in topProducts)
             {
                 AddTableRow(pTable, false,
-                    $"{rank++}. {p.Name}", p.TypeName, p.Section,
+                    $"{rank++}. {p.ProductName}", p.TypeName, p.Section,
                     $"{p.TotalQty}", $"{p.Revenue:F2}",
-                    "", alt ? AltRow : White);
+                    bg: alt ? AltRow : White);
                 alt = !alt;
             }
-            var prodTotal = items.Where(oi => oi.ItemType == "product")
-                                 .Sum(oi => oi.PriceAtOrder * oi.Quantity);
+            var prodTotal = rows.Where(r => r.ItemType == "product").Sum(r => r.LineTotal);
             AddTotalRow(pTable, "ИТОГО (блюда)", "", "",
-                $"{items.Where(oi => oi.ItemType == "product").Sum(oi => oi.Quantity)}",
+                $"{rows.Where(r => r.ItemType == "product").Sum(r => r.Quantity)}",
                 $"{prodTotal:F2}");
 
             // ── Топ N Karaoke-опций ──────────────────────────────
-            var topOptions = items
-                .Where(oi => oi.ItemType == "option" && oi.Option != null)
-                .GroupBy(oi => new {
-                    oi.OptionId,
-                    Name = oi.Option!.Name
-                })
+            var topOptions = rows
+                .Where(r => r.ItemType == "karaoke" && r.OptionName != null)
+                .GroupBy(r => new { r.OptionId, r.OptionName })
                 .Select(g => new {
-                    g.Key.Name,
-                    TotalQty = g.Sum(oi => oi.Quantity),
-                    Revenue = g.Sum(oi => oi.PriceAtOrder * oi.Quantity),
-                    AvgPrice = g.Average(oi => oi.PriceAtOrder)
+                    g.Key.OptionName,
+                    TotalQty = g.Sum(r => r.Quantity),
+                    Revenue = g.Sum(r => r.LineTotal),
+                    AvgPrice = g.Average(r => r.PriceAtOrder)
                 })
                 .OrderByDescending(x => x.Revenue)
                 .Take(topN).ToList();
@@ -271,28 +257,26 @@ namespace KaraokeClub.Reports
                 foreach (var k in topOptions)
                 {
                     AddTableRow(kTable, false,
-                        $"{rank++}. {k.Name}",
+                        $"{rank++}. {k.OptionName}",
                         $"{k.TotalQty}", $"{k.Revenue:F2}", $"{k.AvgPrice:F2}",
-                        "", "",
-                        alt ? AltRow : White);
+                        bg: alt ? AltRow : White);
                     alt = !alt;
                 }
-                var optTotal = items.Where(oi => oi.ItemType == "option")
-                                    .Sum(oi => oi.PriceAtOrder * oi.Quantity);
+                var optTotal = rows.Where(r => r.ItemType == "karaoke").Sum(r => r.LineTotal);
                 AddTotalRow(kTable, "ИТОГО (опции)",
-                    $"{items.Where(oi => oi.ItemType == "option").Sum(oi => oi.Quantity)}",
+                    $"{rows.Where(r => r.ItemType == "karaoke").Sum(r => r.Quantity)}",
                     $"{optTotal:F2}", "");
             }
 
             // ── По разделам меню ─────────────────────────────────
             AddSectionTitle(doc, "Выручка по разделам меню");
-            var bySection = items
-                .Where(oi => oi.ItemType == "product" && oi.Product != null)
-                .GroupBy(oi => oi.Product!.Section)
+            var bySection = rows
+                .Where(r => r.ItemType == "product" && r.ProductSection != null)
+                .GroupBy(r => r.ProductSection!)
                 .Select(g => new {
                     Section = g.Key,
-                    Revenue = g.Sum(oi => oi.PriceAtOrder * oi.Quantity),
-                    Qty = g.Sum(oi => oi.Quantity)
+                    Revenue = g.Sum(r => r.LineTotal),
+                    Qty = g.Sum(r => r.Quantity)
                 })
                 .OrderByDescending(x => x.Revenue).ToList();
 
@@ -303,8 +287,7 @@ namespace KaraokeClub.Reports
             {
                 AddTableRow(secTable, false,
                     s.Section, $"{s.Revenue:F2}", $"{s.Qty}",
-                    "", "", "",
-                    alt ? AltRow : White);
+                    bg: alt ? AltRow : White);
                 alt = !alt;
             }
 
@@ -312,9 +295,10 @@ namespace KaraokeClub.Reports
             return doc;
         }
 
-        // ══════════════════════════════════════════════════════════
+        // ════════════════════════════════════════════════════════
         // ОТЧЁТ 3 — Нагрузка на персонал
-        // ══════════════════════════════════════════════════════════
+        // Источник данных: представление vw_StaffWorkloadReport
+        // ════════════════════════════════════════════════════════
         public static FlowDocument BuildStaffReport(
             AppDbContext ctx,
             DateTime dateFrom,
@@ -323,32 +307,29 @@ namespace KaraokeClub.Reports
         {
             var doc = CreateDocument();
 
-            AddHeader(doc, "Отчёт по нагрузке на персонал",
+            AddHeader(doc,
+                "Отчёт по нагрузке на персонал",
                 $"Период: {dateFrom:dd.MM.yyyy} — {dateTo:dd.MM.yyyy}   |   " +
                 $"Должность: {roleFilter}   |   Дата формирования: {DateTime.Now:dd.MM.yyyy HH:mm}");
 
+            // ── Загрузка через vw_StaffWorkloadReport ────────────
             var dfUtc = dateFrom.Date;
             var dtUtc = dateTo.Date.AddDays(1);
 
-            var ordersQ = ctx.Orders
-                .Include(o => o.Worker).ThenInclude(w => w!.Role)
-                .Include(o => o.Bill)
-                .Include(o => o.OrderItems)
-                .Where(o => o.CreatedAt >= dfUtc && o.CreatedAt < dtUtc);
-
-            var orders = ordersQ.ToList();
+            var query = ctx.StaffWorkloadReportView
+                .Where(r => r.OrderDate >= dfUtc && r.OrderDate < dtUtc);
 
             if (roleFilter != "Все должности")
-                orders = orders.Where(o => o.Worker?.Role?.Name == roleFilter).ToList();
+                query = query.Where(r => r.RoleName == roleFilter);
 
-            // ── Сводка ───────────────────────────────────────────
-            var totalOrders = orders.Count;
-            var closedOrders = orders.Count(o => o.Status == "closed");
-            var openOrders = orders.Count(o => o.Status == "open");
-            var totalRev = orders.Sum(o => o.Bill?.TotalAmount ?? 0);
-            var avgItems = orders.Any()
-                                 ? orders.Average(o => o.OrderItems.Count)
-                                 : 0;
+            var rows = query.ToList();
+
+            // ── Общая сводка ─────────────────────────────────────
+            var totalOrders = rows.Count;
+            var closedOrders = rows.Count(r => r.OrderStatus == "closed");
+            var openOrders = rows.Count(r => r.OrderStatus == "open");
+            var totalRev = rows.Sum(r => r.TotalAmount ?? 0);
+            var avgItems = totalOrders > 0 ? rows.Average(r => (double)r.ItemCount) : 0;
 
             AddSectionTitle(doc, "Общая сводка за период");
             var summTable = CreateTable(doc, new[] { "*", "*", "*", "*", "*" });
@@ -361,22 +342,18 @@ namespace KaraokeClub.Reports
 
             // ── Нагрузка по сотрудникам ──────────────────────────
             AddSectionTitle(doc, "Нагрузка по сотрудникам");
-            var byWorker = orders
-                .GroupBy(o => new {
-                    Name = o.Worker?.Name ?? "—",
-                    Role = o.Worker?.Role?.Name ?? "—"
-                })
+            var byWorker = rows
+                .GroupBy(r => new { r.WorkerId, r.WorkerName, r.RoleName })
                 .Select(g => new {
-                    g.Key.Name,
-                    g.Key.Role,
+                    g.Key.WorkerName,
+                    g.Key.RoleName,
                     OrderCount = g.Count(),
-                    Revenue = g.Sum(o => o.Bill?.TotalAmount ?? 0),
-                    AvgGuests = g.Any(o => o.GuestCount > 0)
-                                    ? g.Where(o => o.GuestCount > 0)
-                                       .Average(o => o.GuestCount!.Value)
+                    Revenue = g.Sum(r => r.TotalAmount ?? 0),
+                    AvgGuests = g.Any(r => r.GuestCount > 0)
+                                    ? g.Where(r => r.GuestCount > 0).Average(r => (double)r.GuestCount!.Value)
                                     : 0,
-                    AvgItems = g.Average(o => o.OrderItems.Count),
-                    ClosedCount = g.Count(o => o.Status == "closed")
+                    AvgItems = g.Average(r => (double)r.ItemCount),
+                    ClosedCount = g.Count(r => r.OrderStatus == "closed")
                 })
                 .OrderByDescending(x => x.Revenue).ToList();
 
@@ -388,23 +365,23 @@ namespace KaraokeClub.Reports
             foreach (var w in byWorker)
             {
                 AddTableRow(wTable, false,
-                    w.Name, w.Role,
+                    w.WorkerName, w.RoleName,
                     $"{w.OrderCount}", $"{w.ClosedCount}",
                     $"{w.AvgGuests:F1}", $"{w.Revenue:F2}",
-                    alt ? AltRow : White);
+                    bg: alt ? AltRow : White);
                 alt = !alt;
             }
             AddTotalRow(wTable, "ИТОГО", "", $"{totalOrders}", $"{closedOrders}", "", $"{totalRev:F2}");
 
-            // ── Нагрузка по ролям ────────────────────────────────
+            // ── Нагрузка по должностям ───────────────────────────
             AddSectionTitle(doc, "Нагрузка по должностям");
-            var byRole = orders
-                .GroupBy(o => o.Worker?.Role?.Name ?? "—")
+            var byRole = rows
+                .GroupBy(r => r.RoleName)
                 .Select(g => new {
                     Role = g.Key,
                     OrderCount = g.Count(),
-                    Revenue = g.Sum(o => o.Bill?.TotalAmount ?? 0),
-                    Workers = g.Select(o => o.Worker?.Name).Distinct().Count()
+                    Revenue = g.Sum(r => r.TotalAmount ?? 0),
+                    WorkerCount = g.Select(r => r.WorkerId).Distinct().Count()
                 })
                 .OrderByDescending(x => x.Revenue).ToList();
 
@@ -415,24 +392,22 @@ namespace KaraokeClub.Reports
             foreach (var r in byRole)
             {
                 AddTableRow(rTable, false,
-                    r.Role, $"{r.Workers}", $"{r.OrderCount}", $"{r.Revenue:F2}",
-                    "", "",
-                    alt ? AltRow : White);
+                    r.Role, $"{r.WorkerCount}", $"{r.OrderCount}", $"{r.Revenue:F2}",
+                    bg: alt ? AltRow : White);
                 alt = !alt;
             }
 
-            // ── Загруженность по столам ──────────────────────────
+            // ── Загруженность столов ─────────────────────────────
             AddSectionTitle(doc, "Загруженность столов");
-            var byTable = orders
-                .GroupBy(o => o.TableNumber)
+            var byTable = rows
+                .GroupBy(r => r.TableNumber)
                 .Select(g => new {
                     Table = g.Key,
                     Sessions = g.Count(),
-                    Revenue = g.Sum(o => o.Bill?.TotalAmount ?? 0),
-                    AvgGuests = g.Any(o => o.GuestCount > 0)
-                                   ? g.Where(o => o.GuestCount > 0)
-                                      .Average(o => o.GuestCount!.Value)
-                                   : 0
+                    Revenue = g.Sum(r => r.TotalAmount ?? 0),
+                    AvgGuests = g.Any(r => r.GuestCount > 0)
+                                    ? g.Where(r => r.GuestCount > 0).Average(r => (double)r.GuestCount!.Value)
+                                    : 0
                 })
                 .OrderBy(x => x.Table).ToList();
 
@@ -445,8 +420,7 @@ namespace KaraokeClub.Reports
                 AddTableRow(tTable, false,
                     $"Стол {t.Table}", $"{t.Sessions}",
                     $"{t.AvgGuests:F1}", $"{t.Revenue:F2}",
-                    "", "",
-                    alt ? AltRow : White);
+                    bg: alt ? AltRow : White);
                 alt = !alt;
             }
             AddTotalRow(tTable, "ИТОГО", $"{totalOrders}", "", $"{totalRev:F2}");
@@ -455,9 +429,9 @@ namespace KaraokeClub.Reports
             return doc;
         }
 
-        // ══════════════════════════════════════════════════════════
-        // ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ
-        // ══════════════════════════════════════════════════════════
+        // ════════════════════════════════════════════════════════
+        //  ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ (без изменений)
+        // ════════════════════════════════════════════════════════
 
         private static FlowDocument CreateDocument()
         {
@@ -487,7 +461,7 @@ namespace KaraokeClub.Reports
                         new System.Windows.Controls.TextBlock
                         {
                             Text       = "PARK ZONE — Система управления",
-                            Foreground = new SolidColorBrush(Color.FromRgb(200, 224, 0)),  // #c8e000
+                            Foreground = new SolidColorBrush(Color.FromRgb(200, 224, 0)),
                             FontSize   = 10,
                             FontFamily = new FontFamily("Segoe UI")
                         },
@@ -530,7 +504,7 @@ namespace KaraokeClub.Reports
             {
                 FontSize = 13,
                 FontWeight = FontWeights.SemiBold,
-                Foreground = new SolidColorBrush(Color.FromRgb(74, 124, 31)),   // #4a7c1f
+                Foreground = new SolidColorBrush(Color.FromRgb(74, 124, 31)),
                 Margin = new Thickness(0, 14, 0, 4),
                 BorderBrush = new SolidColorBrush(Color.FromRgb(190, 215, 160)),
                 BorderThickness = new Thickness(0, 0, 0, 1),
@@ -566,10 +540,25 @@ namespace KaraokeClub.Reports
             return table;
         }
 
-        private static void AddTableRow(Table table, bool isHeader, params string[] cells)
-            => AddTableRow(table, isHeader, cells, null);
-
+        // Перегрузка с именованным параметром bg
         private static void AddTableRow(Table table, bool isHeader,
+            string c1, string c2, string c3 = "", string c4 = "",
+            string c5 = "", string c6 = "",
+            SolidColorBrush? bg = null)
+        {
+            var cells = new List<string> { c1, c2 };
+            if (table.Columns.Count > 2) cells.Add(c3);
+            if (table.Columns.Count > 3) cells.Add(c4);
+            if (table.Columns.Count > 4) cells.Add(c5);
+            if (table.Columns.Count > 5) cells.Add(c6);
+            AddTableRowCore(table, isHeader, cells.ToArray(), bg);
+        }
+
+        // Перегрузка с массивом ячеек
+        private static void AddTableRow(Table table, bool isHeader, params string[] cells)
+            => AddTableRowCore(table, isHeader, cells, null);
+
+        private static void AddTableRowCore(Table table, bool isHeader,
             string[] cells, SolidColorBrush? bg)
         {
             var row = new TableRow
@@ -585,8 +574,7 @@ namespace KaraokeClub.Reports
                     FontWeight = isHeader ? FontWeights.SemiBold : FontWeights.Normal,
                     FontSize = 11
                 };
-                if (isHeader)
-                    para.Foreground = Brushes.White;
+                if (isHeader) para.Foreground = Brushes.White;
 
                 var tc = new TableCell(para)
                 {
@@ -597,19 +585,6 @@ namespace KaraokeClub.Reports
             }
 
             table.RowGroups[0].Rows.Add(row);
-        }
-
-        private static void AddTableRow(Table table, bool isHeader,
-            string c1, string c2, string c3 = "", string c4 = "",
-            string c5 = "", string c6 = "",
-            SolidColorBrush? bg = null)
-        {
-            var cells = new List<string> { c1, c2 };
-            if (table.Columns.Count > 2) cells.Add(c3);
-            if (table.Columns.Count > 3) cells.Add(c4);
-            if (table.Columns.Count > 4) cells.Add(c5);
-            if (table.Columns.Count > 5) cells.Add(c6);
-            AddTableRow(table, isHeader, cells.ToArray(), bg);
         }
 
         private static void AddTotalRow(Table table, params string[] cells)
