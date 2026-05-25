@@ -1,0 +1,84 @@
+<Window x:Class="KaraokeClub.Views.ConnectionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="PARK ZONE"
+        Width="440" Height="514"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        Background="#2d2d2d"
+        Icon="/logo.png">
+
+    <Window.Resources>
+        <Style TargetType="TextBox">
+            <Setter Property="Background"      Value="#16213e"/>
+            <Setter Property="Foreground"      Value="White"/>
+            <Setter Property="BorderBrush"     Value="#c8e000 "/>
+            <Setter Property="BorderThickness" Value="0 0 0 1"/>
+            <Setter Property="Padding"         Value="8 6"/>
+            <Setter Property="FontSize"        Value="13"/>
+            <Setter Property="CaretBrush"      Value="White"/>
+        </Style>
+        <Style TargetType="PasswordBox">
+            <Setter Property="Background"      Value="#16213e"/>
+            <Setter Property="Foreground"      Value="White"/>
+            <Setter Property="BorderBrush"     Value="#c8e000 "/>
+            <Setter Property="BorderThickness" Value="0 0 0 1"/>
+            <Setter Property="Padding"         Value="8 6"/>
+            <Setter Property="FontSize"        Value="13"/>
+        </Style>
+        <Style TargetType="Label">
+            <Setter Property="Foreground" Value="#aaaaaa"/>
+            <Setter Property="FontSize"   Value="12"/>
+            <Setter Property="Padding"    Value="0 0 0 2"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="Background"      Value="#4a7c1f "/>
+            <Setter Property="Foreground"      Value="White"/>
+            <Setter Property="FontWeight"      Value="Bold"/>
+            <Setter Property="FontSize"        Value="14"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="0 12">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#2f4b16"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <StackPanel Margin="36">
+
+        <!-- Лого -->
+        <Image Source="/logo.png" Width="133" Height="158" />
+
+
+        <!-- Поля подключения -->
+
+        <!-- Разделитель -->
+        <Border Height="1" Background="#333" Margin="0,20,0,16"/>
+
+        <!-- Логин и пароль приложения -->
+        <Label Content="Логин"/>
+        <TextBox x:Name="TxtLogin"/>
+
+        <Label Content="Пароль" Margin="0,12,0,0"/>
+        <PasswordBox x:Name="PwdApp"/>
+
+        <!-- Ошибка -->
+        <TextBlock x:Name="TxtError" Foreground="#e94560" FontSize="12"
+                   TextWrapping="Wrap" Margin="0,10,0,0" Visibility="Collapsed"/>
+
+        <!-- Кнопка -->
+        <Button Content="Подключиться" Margin="0,20,0,0" Click="Connect_Click"/>
+
+    </StackPanel>
+</Window>

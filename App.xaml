@@ -1,0 +1,683 @@
+<Application x:Class="KaraokeClub.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="clr-namespace:KaraokeClub.Models"
+             xmlns:vm="clr-namespace:KaraokeClub.ViewModels"
+             StartupUri="Views/ConnectionWindow.xaml">
+    <Application.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolVis"/>
+
+        <Style TargetType="Label">
+            <Setter Property="Foreground" Value="#aaa"/>
+            <Setter Property="FontSize"   Value="12"/>
+            <Setter Property="Padding"    Value="0 0 0 2"/>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Background"      Value="#16213e"/>
+            <Setter Property="Foreground"      Value="White"/>
+            <Setter Property="BorderBrush"     Value="#e94560"/>
+            <Setter Property="BorderThickness" Value="0 0 0 1"/>
+            <Setter Property="Padding"         Value="6 5"/>
+            <Setter Property="FontSize"        Value="13"/>
+            <Setter Property="CaretBrush"      Value="White"/>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Background"         Value="#1a2a4a"/>
+            <Setter Property="Foreground"         Value="White"/>
+            <Setter Property="BorderBrush"        Value="#e94560"/>
+            <Setter Property="BorderThickness"    Value="0 0 0 1"/>
+            <Setter Property="Padding"            Value="6 4"/>
+            <Setter Property="FontSize"           Value="13"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <Border x:Name="border"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4"/>
+                            <!-- Стрелка -->
+                            <ToggleButton x:Name="toggleButton"
+                                  Background="Transparent"
+                                  BorderThickness="0"
+                                  IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                  Focusable="False"
+                                  Cursor="Hand">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border Background="Transparent">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition/>
+                                                    <ColumnDefinition Width="28"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Border Grid.Column="0" Background="Transparent"/>
+                                                <Path Grid.Column="1"
+                                              Data="M 0 0 L 6 6 L 12 0"
+                                              Stroke="#e94560" StrokeThickness="2"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <!-- Выбранное значение -->
+                            <ContentPresenter x:Name="contentPresenter"
+                                      Content="{TemplateBinding SelectionBoxItem}"
+                                      ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                      ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                      ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
+                                      Margin="8 5 30 5"
+                                      VerticalAlignment="Center"
+                                      HorizontalAlignment="Left"
+                                      IsHitTestVisible="False"
+                                      TextBlock.Foreground="White"/>
+                            <!-- Выпадающий список -->
+                            <Popup x:Name="PART_Popup"
+                           IsOpen="{TemplateBinding IsDropDownOpen}"
+                           Placement="Bottom"
+                           AllowsTransparency="True"
+                           Focusable="False"
+                           PopupAnimation="Slide">
+                                <Border Background="#1a2a4a"
+                                BorderBrush="#e94560"
+                                BorderThickness="1"
+                                CornerRadius="0 0 4 4"
+                                MinWidth="{TemplateBinding ActualWidth}"
+                                MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <ScrollViewer>
+                                        <ItemsPresenter/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding"    Value="8 7"/>
+            <Setter Property="FontSize"   Value="13"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="bg"
+                        Background="{TemplateBinding Background}"
+                        Padding="{TemplateBinding Padding}">
+                            <ContentPresenter TextBlock.Foreground="{TemplateBinding Foreground}"
+                                              Content="{TemplateBinding Content}"
+                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                  ContentStringFormat="{TemplateBinding ContentStringFormat}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#e94560"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#c73652"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="DatePicker">
+            <Setter Property="Background"      Value="#1a2a4a"/>
+            <Setter Property="Foreground"      Value="White"/>
+            <Setter Property="BorderBrush"     Value="#e94560"/>
+            <Setter Property="BorderThickness" Value="0 0 0 1"/>
+            <Setter Property="FontSize"        Value="13"/>
+            <Setter Property="Padding"         Value="6 4"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DatePicker">
+                        <Border Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="4">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition Width="30"/>
+                                </Grid.ColumnDefinitions>
+                                <DatePickerTextBox x:Name="PART_TextBox"
+                                           Grid.Column="0"
+                                           Background="Transparent"
+                                           Foreground="White"
+                                           BorderThickness="0"
+                                           Padding="8 5"
+                                           FontSize="13"
+                                           CaretBrush="White"
+                                           SelectionBrush="#e94560"
+                                           VerticalContentAlignment="Center"/>
+                                <Button x:Name="PART_Button"
+                                Grid.Column="1"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Cursor="Hand"
+                                Focusable="False"
+                                Width="30">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border Background="Transparent">
+                                                <!-- иконка календаря из геометрии -->
+                                                <Path Data="M3,2 L3,0 M7,2 L7,0 M0,3 L10,3 M0,1 Q0,0 1,0 L9,0 Q10,0 10,1 L10,9 Q10,10 9,10 L1,10 Q0,10 0,9 Z M2,5 L4,5 L4,7 L2,7 Z M5,5 L7,5 L7,7 L5,7 Z M8,5 L10,5 L10,7 L8,7 Z M2,8 L4,8 L4,10 L2,10 Z M5,8 L7,8 L7,10 L5,10 Z"
+                                              Stroke="#e94560"
+                                              StrokeThickness="0.9"
+                                              Fill="Transparent"
+                                              Width="14" Height="14"
+                                              Stretch="Uniform"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                                <Popup x:Name="PART_Popup"
+                               AllowsTransparency="True"
+                               Placement="Bottom"
+                               PlacementTarget="{Binding ElementName=PART_TextBox}"
+                               StaysOpen="False">
+                                    <Border Background="#1a2a4a"
+                                    BorderBrush="#e94560"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Effect="{x:Null}">
+                                        <Calendar x:Name="PART_Calendar"
+                                          Background="Transparent"
+                                          BorderThickness="0"
+                                          Foreground="White"
+                                          FontSize="12"/>
+                                    </Border>
+                                </Popup>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Заголовок месяца/года и навигационные кнопки -->
+        <Style TargetType="CalendarButton">
+            <Setter Property="Background"  Value="Transparent"/>
+            <Setter Property="Foreground"  Value="White"/>
+            <Setter Property="FontSize"    Value="12"/>
+            <Setter Property="Margin"      Value="2"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CalendarButton">
+                        <Border x:Name="bg" Background="{TemplateBinding Background}"
+                        CornerRadius="4" Padding="4 3">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                      TextBlock.Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#e94560"/>
+                            </Trigger>
+
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Каждый день в календаре -->
+        <Style TargetType="CalendarDayButton">
+            <Setter Property="Background"  Value="Transparent"/>
+            <Setter Property="Foreground"  Value="White"/>
+            <Setter Property="FontSize"    Value="12"/>
+            <Setter Property="Width"       Value="30"/>
+            <Setter Property="Height"      Value="28"/>
+            <Setter Property="Margin"      Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CalendarDayButton">
+                        <Border x:Name="bg" Background="{TemplateBinding Background}"
+                        CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                      TextBlock.Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#e94560"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#e94560"/>
+                            </Trigger>
+                            <Trigger Property="IsToday" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#2a3f6a"/>
+                                <Setter TargetName="bg" Property="BorderBrush" Value="#e94560"/>
+                                <Setter TargetName="bg" Property="BorderThickness" Value="1"/>
+                            </Trigger>
+                            <Trigger Property="IsInactive" Value="True">
+                                <Setter Property="Foreground" Value="#555e7a"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Сам Calendar — шапка с кнопками prev/next и заголовком -->
+        <Style TargetType="Calendar">
+            <Setter Property="Background"   Value="Transparent"/>
+            <Setter Property="BorderBrush"  Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground"   Value="White"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Calendar">
+                        <CalendarItem x:Name="PART_CalendarItem"
+                              Background="Transparent"
+                              BorderBrush="Transparent"
+                              BorderThickness="0"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- CalendarItem — внутренняя структура с навигацией -->
+        <Style TargetType="CalendarItem">
+            <Setter Property="Background"      Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CalendarItem">
+                        <ControlTemplate.Resources>
+                            <DataTemplate x:Key="{x:Static CalendarItem.DayTitleTemplateResourceKey}">
+                                <TextBlock Text="{Binding}" Foreground="#e94560"
+                                   FontSize="11" FontWeight="Bold"
+                                   HorizontalAlignment="Center"
+                                   Margin="0 4 0 2"/>
+                            </DataTemplate>
+                        </ControlTemplate.Resources>
+                        <Border Background="#1a2a4a" CornerRadius="6" Padding="8">
+                            <StackPanel>
+                                <!-- Навигация: стрелка назад, заголовок, стрелка вперёд -->
+                                <Grid Margin="0 0 0 6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="28"/>
+                                        <ColumnDefinition/>
+                                        <ColumnDefinition Width="28"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button x:Name="PART_PreviousButton"
+                                    Grid.Column="0"
+                                    Background="Transparent" BorderThickness="0"
+                                    Foreground="#e94560" FontSize="14" FontWeight="Bold"
+                                    Content="‹" Cursor="Hand" Focusable="False"/>
+                                    <Button x:Name="PART_HeaderButton"
+                                    Grid.Column="1"
+                                    Background="Transparent" BorderThickness="0"
+                                    Foreground="White" FontSize="13" FontWeight="Bold"
+                                    Cursor="Hand" Focusable="False"/>
+                                    <Button x:Name="PART_NextButton"
+                                    Grid.Column="2"
+                                    Background="Transparent" BorderThickness="0"
+                                    Foreground="#e94560" FontSize="14" FontWeight="Bold"
+                                    Content="›" Cursor="Hand" Focusable="False"/>
+                                </Grid>
+                                <Grid x:Name="PART_MonthView" Visibility="Visible"/>
+                                <Grid x:Name="PART_YearView"  Visibility="Hidden"/>
+                            </StackPanel>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- ═══════════════════════════════════════════════════
+             SCROLLBAR — тонкий, тёмный, под стиль PARK ZONE
+             ═══════════════════════════════════════════════════ -->
+
+        <!-- Кнопка-стрелка (верх/низ) — скрываем, оставляем только трек -->
+        <Style x:Key="ScrollBarLineButton" TargetType="RepeatButton">
+            <Setter Property="Height"          Value="0"/>
+            <Setter Property="Width"           Value="0"/>
+            <Setter Property="Visibility"      Value="Collapsed"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Background="Transparent"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Пустая зона трека (за пределами ползунка) -->
+        <Style x:Key="ScrollBarPageButton" TargetType="RepeatButton">
+            <Setter Property="IsTabStop"  Value="False"/>
+            <Setter Property="Focusable"  Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Border Background="Transparent"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Сам ползунок (thumb) -->
+        <Style x:Key="ScrollBarThumb" TargetType="Thumb">
+            <Setter Property="IsTabStop"  Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border x:Name="ThumbBorder"
+                                Background="#4a7c1f"
+                                CornerRadius="3"
+                                Margin="2 0"/>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ThumbBorder" Property="Background" Value="#5e9e26"/>
+                            </Trigger>
+                            <Trigger Property="IsDragging" Value="True">
+                                <Setter TargetName="ThumbBorder" Property="Background" Value="#c8e000"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Вертикальный шаблон трека -->
+        <ControlTemplate x:Key="VerticalScrollBarTemplate" TargetType="ScrollBar">
+            <Grid>
+                <Border Background="#1e1e1e" CornerRadius="3" Width="8"
+                        HorizontalAlignment="Center"/>
+                <Track x:Name="PART_Track"
+                       IsDirectionReversed="True"
+                       Width="8">
+                    <Track.DecreaseRepeatButton>
+                        <RepeatButton Style="{StaticResource ScrollBarPageButton}"
+                                      Command="ScrollBar.PageUpCommand"/>
+                    </Track.DecreaseRepeatButton>
+                    <Track.Thumb>
+                        <Thumb Style="{StaticResource ScrollBarThumb}"/>
+                    </Track.Thumb>
+                    <Track.IncreaseRepeatButton>
+                        <RepeatButton Style="{StaticResource ScrollBarPageButton}"
+                                      Command="ScrollBar.PageDownCommand"/>
+                    </Track.IncreaseRepeatButton>
+                </Track>
+            </Grid>
+        </ControlTemplate>
+
+        <!-- Горизонтальный шаблон трека -->
+        <ControlTemplate x:Key="HorizontalScrollBarTemplate" TargetType="ScrollBar">
+            <Grid>
+                <Border Background="#1e1e1e" CornerRadius="3" Height="8"
+                        VerticalAlignment="Center"/>
+                <Track x:Name="PART_Track"
+                       IsDirectionReversed="False"
+                       Height="8">
+                    <Track.DecreaseRepeatButton>
+                        <RepeatButton Style="{StaticResource ScrollBarPageButton}"
+                                      Command="ScrollBar.PageLeftCommand"/>
+                    </Track.DecreaseRepeatButton>
+                    <Track.Thumb>
+                        <Thumb Style="{StaticResource ScrollBarThumb}"/>
+                    </Track.Thumb>
+                    <Track.IncreaseRepeatButton>
+                        <RepeatButton Style="{StaticResource ScrollBarPageButton}"
+                                      Command="ScrollBar.PageRightCommand"/>
+                    </Track.IncreaseRepeatButton>
+                </Track>
+            </Grid>
+        </ControlTemplate>
+
+        <!-- Глобальный стиль ScrollBar -->
+        <Style TargetType="ScrollBar">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="SnapsToDevicePixels"   Value="True"/>
+            <Style.Triggers>
+                <Trigger Property="Orientation" Value="Vertical">
+                    <Setter Property="Width"    Value="10"/>
+                    <Setter Property="MinWidth" Value="10"/>
+                    <Setter Property="Template"
+                            Value="{StaticResource VerticalScrollBarTemplate}"/>
+                </Trigger>
+                <Trigger Property="Orientation" Value="Horizontal">
+                    <Setter Property="Height"    Value="10"/>
+                    <Setter Property="MinHeight" Value="10"/>
+                    <Setter Property="Template"
+                            Value="{StaticResource HorizontalScrollBarTemplate}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- ROLE -->
+
+
+        <!-- MENU TYPE -->
+        <DataTemplate DataType="{x:Type models:MenuType}">
+            <StackPanel Width="440">
+                <Label Content="Тип *"/>
+                <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" PreviewTextInput="OnlyLetters_PreviewTextInput"/>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- KARAOKE OPTION -->
+
+        <!-- WORKER (через обёртку) -->
+        <DataTemplate DataType="{x:Type vm:WorkerEditorViewModel}">
+            <StackPanel Width="440">
+                <Label Content="ФИО *"/>
+                <TextBox Text="{Binding Entity.Name, UpdateSourceTrigger=PropertyChanged}" PreviewTextInput="OnlyLetters_PreviewTextInput"/>
+                <Label Content="Роль *" Margin="0,12,0,0"/>
+                <ComboBox ItemsSource="{Binding Roles}"
+                  SelectedValuePath="Id"
+                  SelectedValue="{Binding Entity.RoleId, Mode=TwoWay}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Name}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <Label Content="IDNP (13 цифр)" Margin="0,12,0,0"/>
+                <TextBox Text="{Binding Entity.Idnp, UpdateSourceTrigger=PropertyChanged}" PreviewTextInput="OnlyNumbers_PreviewTextInput" MaxLength="13"/>
+                <Label Content="Телефон" Margin="0,12,0,0"/>
+                <TextBox Text="{Binding Entity.Phone, UpdateSourceTrigger=PropertyChanged}" PreviewTextInput="Phone_PreviewTextInput"/>
+                <Label Content="Адрес" Margin="0,12,0,0"/>
+                <TextBox Text="{Binding Entity.Address, UpdateSourceTrigger=PropertyChanged}"/>
+                <Label Content="Дата рождения" Margin="0,12,0,0"/>
+                <DatePicker SelectedDate="{Binding Entity.Birth, Mode=TwoWay}"
+                            Loaded="BirthDatePicker_Loaded"/>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- MENU ITEM (через обёртку) -->
+        <DataTemplate DataType="{x:Type vm:MenuItemEditorViewModel}">
+            <StackPanel Width="440">
+                <Label Content="Название *"/>
+                <TextBox Text="{Binding Entity.Name, UpdateSourceTrigger=PropertyChanged}"/>
+                <Label Content="Тип *" Margin="0,12,0,0"/>
+                <ComboBox ItemsSource="{Binding MenuTypes}"
+                          DisplayMemberPath="Name"
+                          SelectedValuePath="Id"
+                          SelectedValue="{Binding SelectedTypeId, Mode=TwoWay}"/>
+                <Label Content="Секция *" Margin="0,12,0,0"/>
+                <Border Background="#383838" BorderBrush="#4a7c1f" BorderThickness="0 0 0 1"
+                        CornerRadius="4" Padding="6 5">
+                    <TextBlock Text="{Binding Entity.Section}" Foreground="White" FontSize="13"/>
+                </Border>
+                <Label Content="Цена *" Margin="0,12,0,0"/>
+                <TextBox Text="{Binding Entity.Price, UpdateSourceTrigger=PropertyChanged}"
+                         PreviewTextInput="OnlyDecimal_PreviewTextInput"/>
+                <Label Content="Вес / Объём *" Margin="0,12,0,0"/>
+                <TextBox Text="{Binding Entity.WeightVolume, UpdateSourceTrigger=PropertyChanged}"/>
+                <Label Content="Состав *" Margin="0,12,0,0"/>
+                <TextBox Text="{Binding Entity.Ingredients, UpdateSourceTrigger=PropertyChanged}"
+                         Height="50" AcceptsReturn="True" TextWrapping="Wrap"/>
+                <Label Content="Время приготовления (мин)" Margin="0,12,0,0"/>
+                <TextBox Text="{Binding Entity.CookingTime, UpdateSourceTrigger=PropertyChanged}"/>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- ORDER (через обёртку) -->
+        <DataTemplate DataType="{x:Type vm:OrderEditorViewModel}">
+            <StackPanel Width="440">
+                <Label Content="Номер стола *"/>
+                <TextBox Text="{Binding Entity.TableNumber, UpdateSourceTrigger=PropertyChanged}"/>
+                <Label Content="Сотрудник *" Margin="0,12,0,0"/>
+                <ComboBox ItemsSource="{Binding Workers}"
+                          DisplayMemberPath="Name"
+                          SelectedValuePath="Id"
+                          SelectedValue="{Binding Entity.WorkerId, Mode=TwoWay}"
+                          IsEditable="False"/>
+                <Label Content="Статус *" Margin="0,12,0,0"/>
+                <ComboBox ItemsSource="{Binding Statuses}"
+                          SelectedValue="{Binding Entity.Status, Mode=TwoWay}"/>
+                <Label Content="Количество гостей" Margin="0,12,0,0"/>
+                <TextBox Text="{Binding Entity.GuestCount, UpdateSourceTrigger=PropertyChanged}"/>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- ORDER ITEM (через обёртку) -->
+        <DataTemplate DataType="{x:Type vm:OrderItemEditorViewModel}">
+            <StackPanel Width="440">
+
+                <!-- ══ ЗАБЛОКИРОВАННЫЕ ПОЛЯ (только при редактировании) ══ -->
+                <Border Visibility="{Binding IsEditItem, Converter={StaticResource BoolVis}}"
+                        Background="#252525" BorderBrush="#4a7c1f"
+                        BorderThickness="1" CornerRadius="6"
+                        Padding="14,12" Margin="0,0,0,16">
+                    <StackPanel>
+                        <!-- Заголовок блока -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                            <TextBlock Text="🔒" FontSize="13" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                            <TextBlock Text="Информация о позиции (только просмотр)"
+                                       Foreground="#888" FontSize="11"
+                                       FontStyle="Italic" VerticalAlignment="Center"/>
+                        </StackPanel>
+
+                        <!-- Сетка 2 колонки -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition/>
+                                <RowDefinition Height="10"/>
+                                <RowDefinition/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Заказ -->
+                            <StackPanel Grid.Column="0" Grid.Row="0">
+                                <TextBlock Text="ЗАКАЗ" Foreground="#666"
+                                           FontSize="10" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <Border Background="#1e1e1e" BorderBrush="#3a3a3a"
+                                        BorderThickness="1" CornerRadius="4" Padding="10,7">
+                                    <TextBlock Text="{Binding Entity.OrderId, StringFormat='# {0}'}"
+                                               Foreground="#999" FontSize="13"/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Тип позиции -->
+                            <StackPanel Grid.Column="2" Grid.Row="0">
+                                <TextBlock Text="ТИП" Foreground="#666"
+                                           FontSize="10" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <Border Background="#1e1e1e" BorderBrush="#3a3a3a"
+                                        BorderThickness="1" CornerRadius="4" Padding="10,7">
+                                    <TextBlock Text="{Binding Entity.ItemType}"
+                                               Foreground="#999" FontSize="13"/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Цена на момент заказа -->
+                            <StackPanel Grid.Column="0" Grid.Row="2">
+                                <TextBlock Text="ЦЕНА НА МОМЕНТ ЗАКАЗА" Foreground="#666"
+                                           FontSize="10" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <Border Background="#1e1e1e" BorderBrush="#3a3a3a"
+                                        BorderThickness="1" CornerRadius="4" Padding="10,7">
+                                    <TextBlock Text="{Binding Entity.PriceAtOrder, StringFormat='{}{0:F2} lei'}"
+                                               Foreground="#999" FontSize="13"/>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Блюдо или Karaoke опция -->
+                            <StackPanel Grid.Column="2" Grid.Row="2">
+                                <TextBlock Text="БЛЮДО / ОПЦИЯ" Foreground="#666"
+                                           FontSize="10" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                <Border Background="#1e1e1e" BorderBrush="#3a3a3a"
+                                        BorderThickness="1" CornerRadius="4" Padding="10,7">
+                                    <TextBlock Text="{Binding ItemDisplayName}"
+                                               Foreground="#999" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- ══ АКТИВНЫЕ ПОЛЯ ПРИ ДОБАВЛЕНИИ ══ -->
+                <StackPanel Visibility="{Binding IsNewItem, Converter={StaticResource BoolVis}}">
+                    <Label Content="Заказ *"/>
+                    <ComboBox ItemsSource="{Binding Orders}"
+                              DisplayMemberPath="Id"
+                              SelectedValuePath="Id"
+                              SelectedValue="{Binding Entity.OrderId, Mode=TwoWay}"/>
+                    <Label Content="Тип позиции *" Margin="0,12,0,0"/>
+                    <ComboBox ItemsSource="{Binding ItemTypes}"
+                              SelectedValue="{Binding SelectedItemType, Mode=TwoWay}"/>
+                    <Label Content="Блюдо (если product)" Margin="0,12,0,0"/>
+                    <ComboBox ItemsSource="{Binding Products}"
+                              DisplayMemberPath="Name"
+                              SelectedValuePath="Id"
+                              SelectedValue="{Binding Entity.ProductId, Mode=TwoWay}"
+                              IsEnabled="{Binding IsProductEnabled}"/>
+                    <Label Content="Karaoke опция (если karaoke)" Margin="0,12,0,0"/>
+                    <ComboBox ItemsSource="{Binding KaraokeOptions}"
+                              SelectedValuePath="Id"
+                              SelectedValue="{Binding Entity.OptionId, Mode=TwoWay}"
+                              IsEnabled="{Binding IsKaraokeEnabled}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- ══ РЕДАКТИРУЕМЫЕ ПОЛЯ (всегда видны) ══ -->
+                <Label Content="Количество *" Margin="0,14,0,0"/>
+                <TextBox Text="{Binding Entity.Quantity, UpdateSourceTrigger=PropertyChanged}"
+                         PreviewTextInput="OnlyNumbers_PreviewTextInput"/>
+
+                <Label Content="Заметка" Margin="0,12,0,0"/>
+                <TextBox Text="{Binding Entity.Notes, UpdateSourceTrigger=PropertyChanged}"
+                         Height="55" AcceptsReturn="True" TextWrapping="Wrap"/>
+
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- BILL (через обёртку) -->
+        <DataTemplate DataType="{x:Type vm:BillEditorViewModel}">
+            <StackPanel Width="440">
+                <Label Content="Заказ *"/>
+                <ComboBox ItemsSource="{Binding Orders}"
+                          DisplayMemberPath="Id"
+                          SelectedValuePath="Id"
+                          SelectedValue="{Binding Entity.OrderId, Mode=TwoWay}"/>
+                <Label Content="Депозит" Margin="0,12,0,0"/>
+                <TextBox Text="{Binding Entity.Deposit, UpdateSourceTrigger=PropertyChanged}"/>
+                <Label Content="Метод оплаты" Margin="0,12,0,0"/>
+                <ComboBox ItemsSource="{Binding PaymentMethods}"
+                          SelectedValue="{Binding Entity.PaymentMethod, Mode=TwoWay}"/>
+                <Label Content="Статус счёта *" Margin="0,12,0,0"/>
+                <ComboBox ItemsSource="{Binding Statuses}"
+                          SelectedValue="{Binding Entity.BillStatus, Mode=TwoWay}"/>
+            </StackPanel>
+        </DataTemplate>
+
+    </Application.Resources>
+</Application>
