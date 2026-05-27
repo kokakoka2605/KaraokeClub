@@ -91,6 +91,102 @@ namespace KaraokeClub
             }
         }
 
+        /// <summary>
+        /// Кнопка «👁 Позиции» в табе Заказы.
+        /// Открывает диалог просмотра/редактирования позиций выбранного заказа.
+        /// После закрытия диалога:
+        ///   - пересчитывает сумму чека (через триггер БД — автоматически);
+        ///   - если все позиции были удалены и заказ уничтожен — обновляет таблицу заказов и счетов;
+        ///   - иначе — только обновляет таблицу позиций и счетов.
+        /// </summary>
+        private void ViewOrderItems_Click(object sender, RoutedEventArgs e)
+        {
+            // Получаем выбранный заказ из DataGrid
+            if (OrdersGrid.SelectedItem is not KaraokeClub.Models.Order order)
+            {
+                MessageBox.Show("Выберите заказ в таблице.",
+                    "Нет выбранного заказа", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var vm = (MainViewModel)DataContext;
+
+            var dlg = new KaraokeClub.Views.OrderItemsDialog(
+                vm.Ctx,
+                order,
+                vm.MenuItems,
+                vm.KaraokeOptions,
+                vm.Orders)
+            {
+                Owner = this
+            };
+
+            dlg.ShowDialog();
+
+            if (!dlg.HasChanges) return;
+
+            if (dlg.OrderWasDeleted)
+            {
+                // Заказ удалён — обновляем обе таблицы
+                vm.OrdersVM.Load();
+                vm.OrderItemsVM.Load();
+                vm.BillsVM.Load();
+                ToastService.Show($"Заказ #{order.Id} и его чек удалены (все позиции были удалены)",
+                    KaraokeClub.Services.ToastKind.Warning);
+            }
+            else
+            {
+                // Только изменились позиции → пересчёт суммы чека произошёл триггером в БД
+                vm.OrderItemsVM.Load();
+                vm.BillsVM.Load();
+            }
+        }
+
+        /// <summary>
+        /// Обработчик смены выделения в таблице заказов.
+        /// Включает/выключает кнопку «👁 Позиции» в зависимости от того,
+        /// выбрана ли строка.
+        /// </summary>
+        private void OrdersGrid_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            // Ищем кнопку «Позиции» в панели над таблицей
+            // (она находится в StackPanel рядом с кнопками Add/Edit/Delete)
+            if (sender is not System.Windows.Controls.DataGrid dg) return;
+
+            bool hasSelection = dg.SelectedItem != null;
+
+            // Обходим визуальное дерево чтобы найти кнопку по тегу
+            // Альтернатива: дать кнопке x:Name="BtnViewOrderItems" в XAML
+            // и обращаться напрямую. Если вы добавили x:Name — используйте:
+            // BtnViewOrderItems.IsEnabled = hasSelection;
+            //
+            // Если x:Name не добавлен — находим через логическое дерево:
+            foreach (var btn in FindVisualChildren<System.Windows.Controls.Button>(this))
+            {
+                if (btn.Content?.ToString() == "👁 Позиции")
+                {
+                    btn.IsEnabled = hasSelection;
+                    break;
+                }
+            }
+        }
+
+        /// <summary>Вспомогательный метод обхода визуального дерева.</summary>
+        private static System.Collections.Generic.IEnumerable<T> FindVisualChildren<T>(
+            System.Windows.DependencyObject depObj) where T : System.Windows.DependencyObject
+        {
+            if (depObj == null) yield break;
+            int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(depObj);
+            for (int i = 0; i < count; i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(depObj, i);
+                if (child is T t) yield return t;
+                foreach (var childOfChild in FindVisualChildren<T>(child))
+                    yield return childOfChild;
+            }
+        }
+
+
         // ─── Восстановление ──────────────────────────────────────────────
         private void Restore_Click(object sender, RoutedEventArgs e)
         {

@@ -549,7 +549,6 @@
                     </Grid>
                 </TabItem>
 
-                <!-- ЗАКАЗЫ -->
                 <TabItem Header="📝 Заказы">
                     <Grid Margin="12">
                         <Grid.RowDefinitions>
@@ -562,14 +561,47 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBox Grid.Column="0" Style="{StaticResource SearchBox}" HorizontalAlignment="Left"
-                                 Text="{Binding OrdersVM.SearchText, UpdateSourceTrigger=PropertyChanged}"/>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Visibility="{Binding IsAdmin, Converter={StaticResource BoolVis}}">
-                                <Button Content="＋ Добавить" Style="{StaticResource BtnPrimary}" Command="{Binding OrdersVM.AddCommand}"/>
-                                <Button Content="✎ Изменить" Style="{StaticResource BtnSecondary}" Margin="6 0 0 0" Command="{Binding OrdersVM.EditCommand}" CommandParameter="{Binding SelectedItem, ElementName=OrdersGrid}"/>
-                                <Button Content="✕ Удалить"  Style="{StaticResource BtnDanger}"   Margin="6 0 0 0" Command="{Binding OrdersVM.DeleteCommand}" CommandParameter="{Binding SelectedItem, ElementName=OrdersGrid}"/>
+                 Text="{Binding OrdersVM.SearchText, UpdateSourceTrigger=PropertyChanged}"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <!-- Кнопка «Позиции» — видна всем (просмотр) -->
+                                <Button Content="👁 Позиции"
+                        Background="#2a5a8a"
+                        Margin="0 0 6 0"
+                        Click="ViewOrderItems_Click"
+                        Tag="{Binding SelectedItem, ElementName=OrdersGrid}">
+                                    <Button.Style>
+                                        <Style TargetType="Button" BasedOn="{StaticResource BtnPrimary}">
+                                            <Setter Property="Background" Value="#2a5a8a"/>
+                                            <Style.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter Property="Background" Value="#3a70b0"/>
+                                                </Trigger>
+                                                <Trigger Property="IsEnabled" Value="False">
+                                                    <Setter Property="Background" Value="#3a3a3a"/>
+                                                    <Setter Property="Foreground" Value="#666"/>
+                                                </Trigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+
+                                <!-- Кнопки CRUD — только для админа -->
+                                <Button Content="＋ Добавить" Style="{StaticResource BtnPrimary}"
+                        Command="{Binding OrdersVM.AddCommand}"
+                        Visibility="{Binding IsAdmin, Converter={StaticResource BoolVis}}"/>
+                                <Button Content="✎ Изменить" Style="{StaticResource BtnSecondary}" Margin="6 0 0 0"
+                        Command="{Binding OrdersVM.EditCommand}"
+                        CommandParameter="{Binding SelectedItem, ElementName=OrdersGrid}"
+                        Visibility="{Binding IsAdmin, Converter={StaticResource BoolVis}}"/>
+                                <Button Content="✕ Удалить"  Style="{StaticResource BtnDanger}"   Margin="6 0 0 0"
+                        Command="{Binding OrdersVM.DeleteCommand}"
+                        CommandParameter="{Binding SelectedItem, ElementName=OrdersGrid}"
+                        Visibility="{Binding IsAdmin, Converter={StaticResource BoolVis}}"/>
                             </StackPanel>
                         </Grid>
-                        <DataGrid Grid.Row="1" x:Name="OrdersGrid" ItemsSource="{Binding OrdersVM.View}">
+                        <DataGrid Grid.Row="1" x:Name="OrdersGrid"
+                  ItemsSource="{Binding OrdersVM.View}"
+                  SelectionChanged="OrdersGrid_SelectionChanged">
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn Header="№" Width="50">
                                     <DataGridTemplateColumn.CellTemplate>

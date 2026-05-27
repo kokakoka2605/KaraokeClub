@@ -1090,3 +1090,14 @@ BEGIN
     ALTER DATABASE [KaraokeClub] SET MULTI_USER;
 END
 GO
+USE KaraokeClub;
+GO
+USE KaraokeClub;
+GO
+
+DBCC CHECKIDENT ('orders', RESEED, 20);
+GO
+DBCC CHECKIDENT ('bill', RESEED, 20);
+DBCC CHECKIDENT ('order_items', RESEED, 60);
+GO
+SELECT MAX(id) FROM order_items;

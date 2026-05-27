@@ -1,0 +1,214 @@
+﻿<Window x:Class="KaraokeClub.Views.OrderItemsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Позиции заказа"
+        Width="860" Height="640"
+        MinWidth="700" MinHeight="480"
+        WindowStartupLocation="CenterOwner"
+        Background="#2d2d2d"
+        Icon="/logo.png">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolVis"/>
+
+        <!-- ── Кнопка зелёная ─────────────────────────────────── -->
+        <Style x:Key="BtnPrimary" TargetType="Button">
+            <Setter Property="Background"      Value="#4a7c1f"/>
+            <Setter Property="Foreground"      Value="White"/>
+            <Setter Property="FontWeight"      Value="Bold"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding"         Value="14 7"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+            <Setter Property="FontSize"        Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#5a9625"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Background" Value="#3a3a3a"/>
+                                <Setter Property="Foreground" Value="#666"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="BtnSecondary" TargetType="Button" BasedOn="{StaticResource BtnPrimary}">
+            <Setter Property="Background" Value="#4a6fa5"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#5a82bc"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="BtnDanger" TargetType="Button" BasedOn="{StaticResource BtnPrimary}">
+            <Setter Property="Background" Value="#8b2c2c"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#b03333"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="BtnGray" TargetType="Button" BasedOn="{StaticResource BtnPrimary}">
+            <Setter Property="Background" Value="#555a44"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#6a7055"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- ── DataGrid ─────────────────────────────────────────── -->
+        <Style TargetType="DataGrid">
+            <Setter Property="AutoGenerateColumns"      Value="False"/>
+            <Setter Property="CanUserAddRows"           Value="False"/>
+            <Setter Property="CanUserDeleteRows"        Value="False"/>
+            <Setter Property="IsReadOnly"               Value="True"/>
+            <Setter Property="Background"               Value="#2d2d2d"/>
+            <Setter Property="RowBackground"            Value="#2d2d2d"/>
+            <Setter Property="AlternatingRowBackground" Value="#333333"/>
+            <Setter Property="Foreground"               Value="#e8e8e8"/>
+            <Setter Property="BorderBrush"              Value="#444444"/>
+            <Setter Property="BorderThickness"          Value="1"/>
+            <Setter Property="FontSize"                 Value="13"/>
+            <Setter Property="GridLinesVisibility"      Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#3a3a3a"/>
+            <Setter Property="SelectionMode"            Value="Single"/>
+            <Setter Property="SelectionUnit"            Value="FullRow"/>
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background"      Value="#4a7c1f"/>
+            <Setter Property="Foreground"      Value="White"/>
+            <Setter Property="FontWeight"      Value="Bold"/>
+            <Setter Property="FontSize"        Value="12"/>
+            <Setter Property="Padding"         Value="10 8"/>
+            <Setter Property="BorderThickness" Value="0 0 1 0"/>
+            <Setter Property="BorderBrush"     Value="#3d6618"/>
+        </Style>
+
+        <Style TargetType="DataGridRow">
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#3d4a2d"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="Padding"         Value="8 5"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Foreground"  Value="White"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel>
+
+        <!-- ══ ШАПКА ════════════════════════════════════════════ -->
+        <Border DockPanel.Dock="Top" Background="#242424" Padding="18 13">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock x:Name="TxtTitle"
+                               FontSize="16" FontWeight="Bold" Foreground="White"/>
+                    <TextBlock x:Name="TxtSubtitle"
+                               FontSize="11" Foreground="#888" Margin="0 3 0 0"/>
+                </StackPanel>
+
+                <!-- Итого сумма чека -->
+                <Border Grid.Column="1" CornerRadius="8" Padding="16 8"
+                        Background="#1d3008" BorderBrush="#4a7c1f" BorderThickness="1"
+                        VerticalAlignment="Center">
+                    <StackPanel>
+                        <TextBlock Text="СУММА ЧЕКА" FontSize="9" FontWeight="SemiBold"
+                                   Foreground="#639922" TextAlignment="Center"/>
+                        <TextBlock x:Name="TxtTotal"
+                                   FontSize="22" FontWeight="Bold" Foreground="#c8e000"
+                                   TextAlignment="Center" Margin="0 2 0 0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ══ ПАНЕЛЬ КНОПОК ════════════════════════════════════ -->
+        <Border DockPanel.Dock="Top" Background="#242424" Padding="16 8"
+                BorderBrush="#3a3a3a" BorderThickness="0 1 0 1">
+            <StackPanel Orientation="Horizontal">
+                <Button x:Name="BtnAdd"    Content="＋ Добавить"  Style="{StaticResource BtnPrimary}"   Click="BtnAdd_Click"/>
+                <Button x:Name="BtnEdit"   Content="✎ Изменить"   Style="{StaticResource BtnSecondary}" Click="BtnEdit_Click"   Margin="6 0 0 0"/>
+                <Button x:Name="BtnDelete" Content="✕ Удалить"    Style="{StaticResource BtnDanger}"    Click="BtnDelete_Click" Margin="6 0 0 0"/>
+
+                <!-- Статус закрытого заказа -->
+                <Border x:Name="ClosedBadge" Visibility="Collapsed"
+                        CornerRadius="6" Padding="12 6" Margin="14 0 0 0"
+                        Background="#2a1010" BorderBrush="#8b2c2c" BorderThickness="1"
+                        VerticalAlignment="Center">
+                    <TextBlock Text="🔒  Заказ закрыт — редактирование недоступно"
+                               Foreground="#e05252" FontSize="12"/>
+                </Border>
+            </StackPanel>
+        </Border>
+
+        <!-- ══ ФУТЕР: ЗАКРЫТЬ ════════════════════════════════════ -->
+        <Border DockPanel.Dock="Bottom" Background="#242424" Padding="16 10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="Закрыть" Style="{StaticResource BtnGray}"
+                        Width="110" Click="BtnClose_Click"/>
+            </StackPanel>
+        </Border>
+
+        <!-- ══ ТАБЛИЦА ПОЗИЦИЙ ══════════════════════════════════ -->
+        <Grid Background="#2d2d2d" Margin="12">
+            <DataGrid x:Name="ItemsGrid"
+                      SelectionChanged="ItemsGrid_SelectionChanged">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="№"     Binding="{Binding Id}"       Width="60"/>
+                    <DataGridTextColumn Header="Тип"   Binding="{Binding ItemType}" Width="80"/>
+                    <DataGridTextColumn Header="Блюдо / Опция"
+                                        Binding="{Binding DisplayName}"             Width="*"/>
+                    <DataGridTextColumn Header="Кол-во"
+                                        Binding="{Binding Quantity}"               Width="70"/>
+                    <DataGridTextColumn Header="Цена"
+                                        Binding="{Binding PriceAtOrder, StringFormat={}{0:F2}}"
+                                        Width="90"/>
+                    <DataGridTextColumn Header="Сумма"
+                                        Binding="{Binding LineTotal, StringFormat={}{0:F2}}"
+                                        Width="100"/>
+                    <DataGridTextColumn Header="Заметка"
+                                        Binding="{Binding Notes}"                  Width="160"/>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <!-- Пустое состояние -->
+            <StackPanel x:Name="EmptyPanel" Visibility="Collapsed"
+                        VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="📋" FontSize="48" HorizontalAlignment="Center" Foreground="#444"/>
+                <TextBlock Text="Нет позиций в заказе" FontSize="14"
+                           Foreground="#666" HorizontalAlignment="Center" Margin="0 10 0 0"/>
+                <TextBlock Text="Нажмите «＋ Добавить» чтобы добавить позицию"
+                           FontSize="12" Foreground="#555" HorizontalAlignment="Center"
+                           Margin="0 4 0 0"/>
+            </StackPanel>
+        </Grid>
+
+    </DockPanel>
+</Window>
