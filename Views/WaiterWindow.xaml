@@ -51,7 +51,6 @@
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
-            <!-- активный раздел подсвечивается через DataTrigger прямо на кнопке -->
         </Style>
 
         <!-- ══ SubBtn ════════════════════════════════════════════ -->
@@ -236,10 +235,10 @@
                         </Border>
                         <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
                             <TextBlock Text="{Binding FullName}"
-           FontSize="13" FontWeight="SemiBold"
-           Foreground="{StaticResource TextMain}"/>
+                                       FontSize="13" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextMain}"/>
                             <TextBlock Text="{Binding RoleName}"
-           FontSize="11" Foreground="{StaticResource TextSub}"/>
+                                       FontSize="11" Foreground="{StaticResource TextSub}"/>
                         </StackPanel>
                     </StackPanel>
                 </StackPanel>
@@ -276,9 +275,11 @@
                     </Button>
                 </Border>
 
-                <!-- Выбор стола — внизу -->
+                <!-- Выбор стола и гостей — внизу -->
                 <StackPanel DockPanel.Dock="Bottom" Margin="16,0,16,16">
                     <Border Height="1" Background="{StaticResource Clr_Border}" Margin="0,0,0,10"/>
+
+                    <!-- Стол -->
                     <TextBlock Text="СТОЛ" FontSize="10" FontWeight="SemiBold"
                                Foreground="{StaticResource TextSub}" Margin="0,0,0,8"/>
                     <ItemsControl ItemsSource="{Binding Tables}">
@@ -290,16 +291,16 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <RadioButton Content="{Binding}"
-                                      GroupName="Tables"
-                                        Style="{StaticResource TableChip}"
-                                         Margin="0,0,4,4"
-                                         Command="{Binding DataContext.SelectTableCommand,
-                                             RelativeSource={RelativeSource AncestorType=Window}}"
-                                         CommandParameter="{Binding}">
+                                             GroupName="Tables"
+                                             Style="{StaticResource TableChip}"
+                                             Margin="0,0,4,4"
+                                             Command="{Binding DataContext.SelectTableCommand,
+                                                 RelativeSource={RelativeSource AncestorType=Window}}"
+                                             CommandParameter="{Binding}">
                                     <RadioButton.IsChecked>
                                         <MultiBinding Converter="{StaticResource EnumBool}" Mode="OneWay">
                                             <Binding Path="DataContext.SelectedTable"
-                     RelativeSource="{RelativeSource AncestorType=Window}"/>
+                                                     RelativeSource="{RelativeSource AncestorType=Window}"/>
                                             <Binding/>
                                         </MultiBinding>
                                     </RadioButton.IsChecked>
@@ -307,6 +308,27 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+
+                    <!-- Количество гостей -->
+                    <StackPanel Margin="0,12,0,0">
+                        <TextBlock Text="ГОСТЕЙ" FontSize="10" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSub}" Margin="0,0,0,8"/>
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="−" Width="28" Height="28"
+                                    Style="{StaticResource QtyBtn}"
+                                    Click="GuestMinus_Click"/>
+                            <TextBlock Text="{Binding GuestCount}"
+                                       FontSize="16" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextMain}"
+                                       VerticalAlignment="Center"
+                                       Margin="12,0" MinWidth="20"
+                                       TextAlignment="Center"/>
+                            <Button Content="+" Width="28" Height="28"
+                                    Style="{StaticResource QtyBtn}"
+                                    Click="GuestPlus_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+
                 </StackPanel>
 
                 <!-- Навигация -->
@@ -520,7 +542,6 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <StackPanel>
-                                <!-- Заголовок секции с якорем -->
                                 <Border x:Name="GroupAnchor"
                                         Tag="{Binding Type}"
                                         Margin="6,16,6,8" Padding="0,0,0,10"
@@ -545,7 +566,6 @@
                                         </Border>
                                     </StackPanel>
                                 </Border>
-                                <!-- Карточки -->
                                 <ItemsControl ItemsSource="{Binding Items}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
@@ -735,6 +755,7 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </ScrollViewer>
+
             <!-- Karaoke список -->
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
                           Visibility="{Binding ShowKaraokeGrid, Converter={StaticResource BoolVis}}">
@@ -1069,6 +1090,8 @@
 
             </DockPanel>
         </Border>
+
+        <!-- Detail Overlay -->
         <Grid x:Name="DetailOverlay"
               Grid.ColumnSpan="3"
               Visibility="Collapsed"

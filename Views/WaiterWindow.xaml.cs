@@ -206,5 +206,18 @@ namespace KaraokeClub.Views
             var dlg = new OrderDetailDialog(order, items, vm) { Owner = this };
             dlg.ShowDialog();
         }
+
+        private void GuestMinus_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is WaiterViewModel vm && vm.GuestCount > 1)
+                vm.GuestCount--;
+        }
+
+        private void GuestPlus_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is WaiterViewModel vm)
+                vm.GuestCount++;
+        }
     }
+
 }

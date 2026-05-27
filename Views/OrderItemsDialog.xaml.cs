@@ -242,8 +242,7 @@ namespace KaraokeClub.Views
             if (ItemsGrid.SelectedItem is not OrderItemRow row) return;
 
             var confirm = MessageBox.Show(
-                $"Удалить позицию «{row.DisplayName}»  ×{row.Quantity}?\n\n" +
-                "Если это последняя позиция — заказ и чек будут удалены.",
+                $"Удалить позицию «{row.DisplayName}»  ×{row.Quantity}?\n\n",
                 "Подтверждение", MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (confirm != MessageBoxResult.Yes) return;
 

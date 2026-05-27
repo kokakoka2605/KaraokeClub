@@ -164,6 +164,12 @@ namespace KaraokeClub.ViewModels
             set { _selectedTable = value; Notify(); }
         }
         public List<int> Tables { get; } = Enumerable.Range(1, 12).ToList();
+        private int _guestCount = 1;
+        public int GuestCount
+        {
+            get => _guestCount;
+            set { _guestCount = value < 1 ? 1 : value; Notify(); }
+        }
 
         // ── корзина ──────────────────────────────────────────────
         public ObservableCollection<CartItem> Cart { get; } = new();
@@ -494,7 +500,7 @@ namespace KaraokeClub.ViewModels
                     cmd.CommandText = "EXEC usp_Insert_Order @table_number, @id_worker, @guest_count";
                     cmd.Parameters.Add(new SqlParameter("@table_number", SelectedTable));
                     cmd.Parameters.Add(new SqlParameter("@id_worker", CurrentWorker.Id));
-                    cmd.Parameters.Add(new SqlParameter("@guest_count", 1));
+                    cmd.Parameters.Add(new SqlParameter("@guest_count", GuestCount));
                     orderId = Convert.ToInt32(cmd.ExecuteScalar());
                     _ctx.Database.CloseConnection();
                 }
